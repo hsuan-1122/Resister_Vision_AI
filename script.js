@@ -57,7 +57,10 @@ async function identifyResistor(imageData) {
 
     const response = await fetch(BACKEND_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+            "Content-Type": "application/json" ,
+            "ngrok-skip-browser-warning": "true"
+        },
         body: JSON.stringify({ image: imageData })
     });
 

@@ -5,7 +5,7 @@ from flask_cors import CORS
 from datetime import datetime
 
 app = Flask(__name__)
-CORS(app)  # 允許跨網域請求（前端網頁連到後端）
+CORS(app, resources={r"/*": {"origins": "*"}})  # 允許跨網域請求（前端網頁連到後端）
 
 # 建立儲存照片的資料夾
 UPLOAD_FOLDER = 'captured_images'
