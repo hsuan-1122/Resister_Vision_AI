@@ -53,7 +53,7 @@ btnCapture.addEventListener('click', async () => {
 async function identifyResistor(imageData) {
     // 將 localhost 改成你電腦的區域網路 IP (例如 192.168.x.x)
     // 這樣你的手機才能連到電腦上的 VS Code 後端
-    const BACKEND_URL = "http://你的電腦IP:5000/upload"; 
+    const BACKEND_URL = "https://cascade-antiques-catcher.ngrok-free.dev/upload";
 
     const response = await fetch(BACKEND_URL, {
         method: "POST",
