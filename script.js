@@ -51,23 +51,31 @@ btnCapture.addEventListener('click', async () => {
 
 // 3. 模擬 API 呼叫 (Mock API)
 async function identifyResistor(imageData) {
-    return new Promise((resolve) => {
-        console.log("正在傳送資料至 AI 模型...");
-        
-        // 模擬網路延遲 1.5 秒
-        setTimeout(() => {
-            const mockData = {
-                value: "10k Ω ± 5%",
-                colors: [
-                    { name: "棕", hex: "#8B4513" },
-                    { name: "黑", hex: "#000000" },
-                    { name: "橘", hex: "#FFA500" },
-                    { name: "金", hex: "#FFD700" }
-                ]
-            };
-            resolve(mockData);
-        }, 1500);
+    // 將 localhost 改成你電腦的區域網路 IP (例如 192.168.x.x)
+    // 這樣你的手機才能連到電腦上的 VS Code 後端
+    const BACKEND_URL = "http://你的電腦IP:5000/upload"; 
+
+    const response = await fetch(BACKEND_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: imageData })
     });
+
+    if (!response.ok) throw new Error("網路請求失敗");
+
+    const result = await response.json();
+    console.log("後端回傳：", result);
+
+    // 這裡暫時維持 Mock Data 讓 UI 顯示
+    return {
+        value: "10k Ω ± 5%",
+        colors: [
+            { name: "棕", hex: "#8B4513" },
+            { name: "黑", hex: "#000000" },
+            { name: "橘", hex: "#FFA500" },
+            { name: "金", hex: "#FFD700" }
+        ]
+    };
 }
 
 // 4. 渲染結果
