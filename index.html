@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 電阻視覺辨識系統</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>Resistor Vision AI</h1>
+            <p>請將電阻置於框內拍攝</p>
+        </header>
+
+        <main>
+            <div class="video-wrapper">
+                <video id="video" autoplay playsinline></video>
+                <!-- 掃描引導框 -->
+                <div class="scan-overlay">
+                    <div class="focus-box"></div>
+                </div>
+            </div>
+
+            <div id="result-area" class="result-card hidden">
+                <h3>辨識結果</h3>
+                <div class="resistor-value" id="value-text">-- Ω</div>
+                <div class="color-sequence" id="color-tags">
+                    <!-- 動態插入顏色標籤 -->
+                </div>
+            </div>
+        </main>
+
+        <nav class="controls">
+            <button id="btn-start" class="btn primary">啟動相機</button>
+            <button id="btn-capture" class="btn secondary" disabled>拍攝辨識</button>
+        </nav>
+    </div>
+
+    <!-- 用於擷取影像的隱藏畫布 -->
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <script src="script.js"></script>
+</body>
+</html>
