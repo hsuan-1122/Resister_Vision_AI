@@ -46,9 +46,9 @@ def extract_resistor_body(image, bbox):
         b_xmin, b_xmax = body_cols[0], body_cols[-1]
         b_ymin, b_ymax = body_rows[0], body_rows[-1]
         
-        # --- 激進修正：左右內縮 5%，排除末端過渡區域與殘留電線 ---
+        # --- 修正：左右內縮 4%，排除末端過渡區域與殘留電線 ---
         width = b_xmax - b_xmin
-        offset_x = int(width * 0.05) 
+        offset_x = int(width * 0.04) 
         b_xmin += offset_x
         b_xmax -= offset_x
         

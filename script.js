@@ -31,15 +31,21 @@ btnCapture.addEventListener('click', async () => {
     canvas.height = video.videoHeight;
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // 轉換為 Base64 (後端 API 通常接收此格式或 Blob)
+    // 轉換為 Base64
     const imageData = canvas.toDataURL('image/jpeg');
+
+    // ==========================================
+    // 🌟 新增：讀取目前選擇的是四環還是五環
+    // ==========================================
+    const selectedBands = document.querySelector('input[name="resistorBands"]:checked').value;
 
     // 顯示載入狀態
     btnCapture.innerText = "辨識中...";
     btnCapture.disabled = true;
 
     try {
-        const result = await identifyResistor(imageData);
+        // 🌟 修改：將 imageData 與 selectedBands 一起傳給 identifyResistor 函式
+        const result = await identifyResistor(imageData, parseInt(selectedBands));
         displayResult(result);
     } catch (error) {
         alert("辨識失敗，請重試");
@@ -49,10 +55,9 @@ btnCapture.addEventListener('click', async () => {
     }
 });
 
-// 3. 模擬 API 呼叫 (Mock API)
-async function identifyResistor(imageData) {
-    // 將 localhost 改成你電腦的區域網路 IP (例如 192.168.x.x)
-    // 這樣你的手機才能連到電腦上的 VS Code 後端
+// 3. 呼叫 API
+// 🌟 修改：函式接收第二個參數 `bands`
+async function identifyResistor(imageData, bands) {
     const BACKEND_URL = "https://cascade-antiques-catcher.ngrok-free.dev/upload";
 
     const response = await fetch(BACKEND_URL, {
@@ -61,7 +66,11 @@ async function identifyResistor(imageData) {
             "Content-Type": "application/json" ,
             "ngrok-skip-browser-warning": "true"
         },
-        body: JSON.stringify({ image: imageData })
+        // 🌟 修改：將 bands 加入 body 傳送給後端
+        body: JSON.stringify({ 
+            image: imageData, 
+            bands: bands 
+        })
     });
 
     if (!response.ok) throw new Error("網路請求失敗");

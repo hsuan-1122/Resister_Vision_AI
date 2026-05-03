@@ -137,3 +137,66 @@ header {
     from { transform: translateY(20px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
 }
+
+
+/* ==========================================
+   四環 / 五環 切換開關樣式
+========================================== */
+.toggle-container {
+    position: relative;
+    display: flex;
+    background-color: #2a2e45; /* 配合你截圖的深色背景 */
+    border-radius: 30px;
+    padding: 6px;
+    margin: 20px auto; /* 讓它置中並與上下保持距離 */
+    width: 80%;
+    max-width: 320px;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* 隱藏預設的圓圈圈選項 */
+.toggle-container input[type="radio"] {
+    display: none;
+}
+
+/* 文字標籤設定 */
+.toggle-container label {
+    flex: 1;
+    text-align: center;
+    padding: 12px 0;
+    font-size: 16px;
+    font-weight: bold;
+    color: #8a91a8; /* 未選取時的暗灰藍色 */
+    cursor: pointer;
+    position: relative;
+    z-index: 2; /* 確保文字在滑塊上方 */
+    transition: color 0.3s ease;
+}
+
+/* 滑動色塊設計 */
+.toggle-container .slider {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: calc(50% - 6px);
+    height: calc(100% - 12px);
+    border-radius: 25px;
+    /* 預設為四環的顏色 (參考你截圖的藍色按鈕) */
+    background-color: #4a7b9d; 
+    /* cubic-bezier 提供一個微微回彈的 Q 彈滑動動畫 */
+    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); 
+    z-index: 1;
+}
+
+/* 文字變色邏輯：被選取時文字變白色 */
+#band4:checked ~ label[for="band4"],
+#band5:checked ~ label[for="band5"] {
+    color: #ffffff;
+}
+
+/* 滑塊移動與變色邏輯：當選擇五環時 */
+#band5:checked ~ .slider {
+    left: 50%;
+    /* 變成五環的顏色 (參考你截圖的紫色按鈕) */
+    background-color: #aa55ff; 
+}

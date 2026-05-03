@@ -24,6 +24,7 @@ for folder in [UPLOAD_FOLDER, CROPPED_FOLDER]:
 def upload_image():
     data = request.json
     image_data = data.get('image') 
+    bands_count = data.get('bands') # 🌟 這裡會收到 4 或 5
     
     if image_data:
         header, encoded = image_data.split(",", 1)
