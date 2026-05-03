@@ -147,4 +147,5 @@ def get_resistor_color(image_path, num_bands=4):
     color_array = []
     for i in range(num_bands):
         color_array.append(classify_band_color(band_data[i], i, num_bands))
+        print(color_array[i])
     return color_array

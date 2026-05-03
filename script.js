@@ -137,7 +137,7 @@ function calculateResistance(colorArray) {
 
 // 3. 呼叫真實 API
 async function identifyResistor(imageData, bands) {
-    const BACKEND_URL = "http://你的後端IP:5000/upload"; // 替換為你的 ngrok 或 IP
+    const BACKEND_URL = "https://cascade-antiques-catcher.ngrok-free.dev/upload";
 
     try {
         const response = await fetch(BACKEND_URL, {

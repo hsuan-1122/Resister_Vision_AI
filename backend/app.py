@@ -6,7 +6,7 @@ from flask_cors import CORS
 from datetime import datetime
 
 # 引入你的各種處理模組
-from yolo import get_resistor_bbox
+from location_scan import get_resistor_bbox
 from preprocess import extract_resistor_body
 # 🌟 新增：引入你剛寫好的顏色辨識函式 (假設存在 color_detector.py 中)
 from color_scan import get_resistor_color
