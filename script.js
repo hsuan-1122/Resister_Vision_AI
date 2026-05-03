@@ -135,34 +135,38 @@ function calculateResistance(colorArray) {
     }
 }
 
-// ==========================================
-// 3. 修改後的模擬 API 呼叫 (模擬後端只回傳陣列)
-// ==========================================
+// 3. 呼叫真實 API
 async function identifyResistor(imageData, bands) {
-    const BACKEND_URL = "https://cascade-antiques-catcher.ngrok-free.dev/upload";
+    const BACKEND_URL = "http://你的後端IP:5000/upload"; // 替換為你的 ngrok 或 IP
 
-    /*
-    // TODO: 正式串接時把這段註解拿掉
-    const response = await fetch(BACKEND_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
-        body: JSON.stringify({ image: imageData, bands: bands })
-    });
-    const data = await response.json();
-    const detectedColors = data.colors; // 假設後端回傳格式為 { colors: ["棕", "黑", "橘", "金"] }
-    */
+    try {
+        const response = await fetch(BACKEND_URL, {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json", 
+                "ngrok-skip-browser-warning": "true" 
+            },
+            // 將影像資料與選擇的環數一起傳送
+            body: JSON.stringify({ image: imageData, bands: bands })
+        });
 
-    // 這裡我們模擬後端 AI 成功回傳了一組顏色字串陣列
-    let detectedColors = [];
-    if (bands === 4) {
-        detectedColors = ["brown", "black", "orange", "gold"]; // 對應 10k Ω ± 5%
-    } else {
-        detectedColors = ["brown", "black", "black", "red", "brown"]; // 對應 10k Ω ± 1% (五環)
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+        const result = await response.json();
+        console.log("後端回傳資料：", result);
+
+        if (result.status === "success" && result.colors) {
+            // 🌟 核心：將後端真實傳來的顏色陣列，丟進前端的查表計算機
+            return calculateResistance(result.colors);
+        } else {
+            console.error("後端處理失敗：", result.message);
+            return { displayValue: "辨識失敗", uiColors: [] };
+        }
+
+    } catch (error) {
+        console.error("API 呼叫失敗：", error);
+        return { displayValue: "網路連線錯誤", uiColors: [] };
     }
-
-
-    // 將後端傳來的陣列丟進我們寫好的計算機
-    return calculateResistance(detectedColors);
 }
 
 // ==========================================
