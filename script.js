@@ -59,18 +59,18 @@ btnCapture.addEventListener('click', async () => {
 // 🌟 新增：電阻色碼查表字典 (包含數值、倍率、誤差與 UI 顏色)
 // ==========================================
 const resistorColorDict = {
-    "black": { value: 0, multiplier: 1, tolerance: null, hex: "#222222", textColor: "#fff" },
-    "brown": { value: 1, multiplier: 10, tolerance: "±1%", hex: "#8B4513", textColor: "#fff" },
-    "red": { value: 2, multiplier: 100, tolerance: "±2%", hex: "#D32F2F", textColor: "#fff" },
-    "orange": { value: 3, multiplier: 1000, tolerance: null, hex: "#F57C00", textColor: "#fff" },
-    "yellow": { value: 4, multiplier: 10000, tolerance: null, hex: "#FBC02D", textColor: "#000" },
-    "green": { value: 5, multiplier: 100000, tolerance: "±0.5%", hex: "#388E3C", textColor: "#fff" },
-    "blue": { value: 6, multiplier: 1000000, tolerance: "±0.25%", hex: "#1976D2", textColor: "#fff" },
-    "purple": { value: 7, multiplier: 10000000, tolerance: "±0.1%", hex: "#7B1FA2", textColor: "#fff" },
-    "gray": { value: 8, multiplier: 100000000, tolerance: "±0.05%", hex: "#757575", textColor: "#fff" },
-    "white": { value: 9, multiplier: 1000000000, tolerance: null, hex: "#FAFAFA", textColor: "#000" },
-    "gold": { value: null, multiplier: 0.1, tolerance: "±5%", hex: "#FFD700", textColor: "#000" },
-    "silver": { value: null, multiplier: 0.01, tolerance: "±10%", hex: "#C0C0C0", textColor: "#000" }
+    "black":  { nameZh: "黑", value: 0, multiplier: 1, tolerance: null, hex: "#222222", textColor: "#fff" },
+    "brown":  { nameZh: "棕", value: 1, multiplier: 10, tolerance: "±1%", hex: "#8B4513", textColor: "#fff" },
+    "red":    { nameZh: "紅", value: 2, multiplier: 100, tolerance: "±2%", hex: "#D32F2F", textColor: "#fff" },
+    "orange": { nameZh: "橘", value: 3, multiplier: 1000, tolerance: null, hex: "#F57C00", textColor: "#fff" },
+    "yellow": { nameZh: "黃", value: 4, multiplier: 10000, tolerance: null, hex: "#FBC02D", textColor: "#000" },
+    "green":  { nameZh: "綠", value: 5, multiplier: 100000, tolerance: "±0.5%", hex: "#388E3C", textColor: "#fff" },
+    "blue":   { nameZh: "藍", value: 6, multiplier: 1000000, tolerance: "±0.25%", hex: "#1976D2", textColor: "#fff" },
+    "purple": { nameZh: "紫", value: 7, multiplier: 10000000, tolerance: "±0.1%", hex: "#7B1FA2", textColor: "#fff" },
+    "gray":   { nameZh: "灰", value: 8, multiplier: 100000000, tolerance: "±0.05%", hex: "#757575", textColor: "#fff" },
+    "white":  { nameZh: "白", value: 9, multiplier: 1000000000, tolerance: null, hex: "#FAFAFA", textColor: "#000" },
+    "gold":   { nameZh: "金", value: null, multiplier: 0.1, tolerance: "±5%", hex: "#FFD700", textColor: "#000" },
+    "silver": { nameZh: "銀", value: null, multiplier: 0.01, tolerance: "±10%", hex: "#C0C0C0", textColor: "#000" }
 };
 
 // ==========================================
@@ -117,7 +117,8 @@ function calculateResistance(colorArray) {
         const uiColors = colorArray.map(colorName => {
             const data = resistorColorDict[colorName];
             return {
-                name: colorName,
+                // 🌟 關鍵修改：如果有找到對應的資料，就用 nameZh (中文)，否則 fallback 原本的英文
+                name: data ? data.nameZh : colorName, 
                 hex: data ? data.hex : "#CCC",
                 textColor: data ? data.textColor : "#000"
             };
@@ -154,10 +155,11 @@ async function identifyResistor(imageData, bands) {
     // 這裡我們模擬後端 AI 成功回傳了一組顏色字串陣列
     let detectedColors = [];
     if (bands === 4) {
-        detectedColors = ["棕", "黑", "橘", "金"]; // 模擬: 10k Ω ± 5%
+        detectedColors = ["brown", "black", "orange", "gold"]; // 對應 10k Ω ± 5%
     } else {
-        detectedColors = ["棕", "黑", "黑", "紅", "棕"]; // 模擬: 10k Ω ± 1% (五環)
+        detectedColors = ["brown", "black", "black", "red", "brown"]; // 對應 10k Ω ± 1% (五環)
     }
+
 
     // 將後端傳來的陣列丟進我們寫好的計算機
     return calculateResistance(detectedColors);
