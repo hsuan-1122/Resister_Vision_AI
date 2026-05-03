@@ -4,7 +4,7 @@ import numpy as np
 # ==========================================
 # 全域設定
 # ==========================================
-USE_CLAHE = True  # 是否啟用 CLAHE 影像增強
+USE_CLAHE = False  # 是否啟用 CLAHE 影像增強
 
 def extract_resistor_body(image, bbox):
     """

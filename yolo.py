@@ -2,6 +2,7 @@ from ultralytics import YOLO
 import matplotlib.pyplot as plt
 from PIL import Image
 
+
 # 1. 載入模型
 model = YOLO('best.pt')
 

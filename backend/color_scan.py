@@ -2,6 +2,26 @@ import cv2
 import numpy as np
 from scipy.signal import find_peaks, peak_widths
 
+import csv  # 🌟 新增：處理 CSV 檔案
+import os   # 🌟 新增：用來檢查檔案是否已存在
+
+import joblib  # 🌟 新增：用來讀取訓練好的 .pkl 模型
+
+# ==========================================
+# 🌟 全域設定開關
+# ==========================================
+# 設為 True：每次辨識都會把 RGBHSV 記錄到 CSV 中 (適合蒐集資料階段)
+# 設為 False：純粹進行辨識，不寫入任何檔案 (適合正式上線階段)
+ENABLE_DATA_COLLECTION = False
+
+# ==========================================
+# 🌟 載入訓練好的 SVM 模型 (放在全域避免重複載入)
+# ==========================================
+print("🚀 正在載入 SVM 顏色分類模型...")
+# 確保檔名與路徑和你儲存的 pkl 檔一致
+svm_model = joblib.load('resistor_color_svm.pkl') 
+print("✅ SVM 模型載入完成！")
+
 def package_band_data(robust_hsv, band_positions):
     w = len(robust_hsv)
     bands_data = []
@@ -76,76 +96,160 @@ def detect_resistor_bands_centroid(image_path, num_bands=4):
     return package_band_data(robust_hsv, band_positions)
 
 
-
-def classify_band_color(band_info, band_index, total_bands):
-    """
-    根據 HSV 數值將特徵點分類為 12 種電阻顏色之一。
-    band_index: 目前是第幾個色環 (0 起始)
-    total_bands: 總共有幾個色環 (用來輔助判斷金/銀)
-    """
-    hsv = band_info["hsv"]
-    h, s, v = hsv["h"], hsv["s"], hsv["v"]
+# def get_resistor_color(image_path, num_bands=4):
+#     band_data = detect_resistor_bands_centroid(image_path, num_bands=4)
+#     color_array = []
     
-    # 判斷是否為最後一個色環 (誤差環)，金銀通常只出現在這裡
-    is_last_band = (band_index == total_bands - 1)
-    is_multiplier_band = (band_index == total_bands - 2)
+#     # 🌟 防呆：如果完全沒偵測到任何色環，直接回傳 None 讓 app.py 報錯
+#     if not band_data or len(band_data) == 0:
+#         print("⚠️ 警告：完全沒有偵測到色環特徵！")
+#         return None
 
-    # 1. 先抓出「無色彩」的顏色：黑、白、灰、銀
-    # V (亮度) 極低 -> 黑色
-    if v < 45:
-        return "black"
-    
-    # S (飽和度) 很低代表沒有顏色，只剩灰階的明暗
-    if s < 50:
-        if v > 200:
-            return "white"
-        elif 100 < v <= 200:
-            # 灰跟銀在視覺上極度相似，通常用位置來猜測
-            return "silver" if (is_last_band or is_multiplier_band) else "gray"
-        else:
-            return "gray"
-
-    # 2. 判斷「有色彩」的顏色 (根據 H 色相)
-    # 注意：假設你的 OpenCV H 範圍是 0~180 (如果是 0~360，請把下列的 H 判斷乘以 2)
-    
-    if (0 <= h < 10) or (170 <= h <= 180):
-        # 紅色與棕色的 Hue 是一樣的，差別在於棕色比較暗 (V 較低)
-        if v < 130:
-            return "brown"
-        else:
-            return "red"
+#     # 🌟 修改：安全地迴圈抓取資料
+#     for i in range(num_bands):
+#         # 檢查目前的 index 是否還在偵測到的陣列長度內
+#         if i < len(band_data):
+#             color = classifier.classify_band_color(band_data[i], i, num_bands)
+#             color_array.append(color)
+#             print(color)
+#         else:
+#             # 如果偵測到的環不夠（例如預期4環只找到3環），剩下的直接補 "unknown"
+#             print(f"⚠️ 警告：第 {i+1} 環特徵遺失，補上 unknown。")
+#             color_array.append("unknown")
             
-    elif 10 <= h < 22:
-        # 橘色與棕色的邊界，暗的橘色也是棕色
-        if v < 150:
-            return "brown"
-        else:
-            return "orange"
-            
-    elif 22 <= h < 35:
-        # 黃色與金色的 Hue 一樣。
-        # 金色通常飽和度 (S) 較低一點，且經常出現在末端。
-        if s < 180 and (is_last_band or is_multiplier_band):
-            return "gold"
-        else:
-            return "yellow"
-            
-    elif 35 <= h < 85:
-        return "green"
-        
-    elif 85 <= h < 130:
-        return "blue"
-        
-    elif 130 <= h < 170:
-        return "purple"
-
-    # 如果掉出範圍 (非常罕見)，預設回傳未知或取近似
-    return "unknown"
+#     return color_array
 
 def get_resistor_color(image_path, num_bands=4):
-    band_data = detect_resistor_bands_centroid(image_path, num_bands=4)
+    band_data = detect_resistor_bands_centroid(image_path, num_bands=num_bands) 
     color_array = []
+    data_to_save = [] # 用來暫存準備寫入 CSV 的數據
+    
+    # 防呆：如果完全沒偵測到任何色環，直接回傳 None
+    if not band_data or len(band_data) == 0:
+        print("⚠️ 警告：完全沒有偵測到色環特徵！")
+        return None
+
+    # 安全地迴圈抓取資料
     for i in range(num_bands):
-        color_array.append(classify_band_color(band_data[i], i, num_bands))
-        print(color_array[i])
+        # 檢查目前的 index 是否還在偵測到的陣列長度內
+        if i < len(band_data):
+            # 1. 提取 6 個特徵數值
+            r = band_data[i]["rgb"]["r"]
+            g = band_data[i]["rgb"]["g"]
+            b = band_data[i]["rgb"]["b"]
+            h = band_data[i]["hsv"]["h"]
+            s = band_data[i]["hsv"]["s"]
+            v = band_data[i]["hsv"]["v"]
+
+            # ==========================================
+            # 🌟 使用新模型取代舊的距離計算
+            # ==========================================
+            # 把特徵打包成 2D 陣列餵給模型預測
+            features = [[r, g, b, h, s, v]]
+            predicted_color = svm_model.predict(features)[0]
+
+            # 💡 商業邏輯防呆：金銀不該出現在前段環數
+            is_metal_pos = (i >= num_bands - 2)
+            if not is_metal_pos and predicted_color in ["gold", "silver"]:
+                predicted_color = "yellow" if predicted_color == "gold" else "gray"
+
+            color_array.append(predicted_color)
+            print(f"🎯 第 {i+1} 環預測結果: {predicted_color}")
+
+            # 2. 如果開關打開，將這組數據暫存起來
+            if ENABLE_DATA_COLLECTION:
+                data_to_save.append([r, g, b, h, s, v])
+                
+        else:
+            # 如果偵測到的環不夠，剩下的直接補 "unknown"
+            print(f"⚠️ 警告：第 {i+1} 環特徵遺失，補上 unknown。")
+            color_array.append("unknown")
+            
+    # ==========================================
+    # 🌟 批次寫入 CSV 功能 (受全域開關控制)
+    # ==========================================
+    if ENABLE_DATA_COLLECTION and len(data_to_save) > 0:
+        csv_filename = "color_data_log.csv"
+        file_exists = os.path.exists(csv_filename)
+
+        # 使用 'a' (append) 模式開啟檔案
+        with open(csv_filename, mode='a', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            
+            # 如果是新建立的檔案，先寫入第一行的欄位名稱
+            if not file_exists:
+                writer.writerow(['R', 'G', 'B', 'H', 'S', 'V'])
+                
+            # 一次把剛才暫存的所有顏色數據寫入，效能更好
+            writer.writerows(data_to_save)
+        
     return color_array
+
+
+# class ResistorColorClassifier:
+#     def __init__(self):
+#         # 1. 建立「標準色環字典」(RGB)
+#         # 這些是完美白光下的基準點，你可以根據實際環境微調
+#         self.standard_colors = {
+#             "black":  (0,  0,  0), #
+#             "brown":  (25, 0,  0), #
+#             "red":    (73, 0,  18), #
+#             "orange": (90, 30, 0), #
+#             "yellow": (100, 110, 20),
+#             "green":  (0,  40, 0), #
+#             "blue":   (35,  65,  100),
+#             "purple": (120, 60,  140),
+#             "gray":   (115, 115, 115),
+#             "white":  (200, 200, 200),
+#             "gold":   (90, 75, 40),
+#             "silver": (160, 160, 170)
+#         }
+        
+#         # 預先將所有標準色轉換為 LAB 空間，節省未來運算時間
+#         self.lab_references = {}
+#         for name, rgb in self.standard_colors.items():
+#             self.lab_references[name] = self._rgb_to_lab(rgb)
+#     def _rgb_to_lab(self, rgb_tuple):
+#         """將單一 RGB tuple 轉換為 LAB 空間"""
+#         pixel_img = np.uint8([[rgb_tuple]])
+#         lab_pixel = cv2.cvtColor(pixel_img, cv2.COLOR_RGB2LAB)
+#         return lab_pixel[0][0].astype(np.float32)
+
+#     def classify_band_color(self, band_info, band_index, total_bands):
+#         """
+#         根據 CIELAB 色彩距離與位置權重，分類電阻顏色。
+#         """
+#         # 直接拿你上一步打包好的 RGB 數值
+#         r = band_info["rgb"]["r"]
+#         g = band_info["rgb"]["g"]
+#         b = band_info["rgb"]["b"]
+        
+#         # 將目標顏色轉為 LAB
+#         target_lab = self._rgb_to_lab((r, g, b))
+        
+#         # 位置邏輯：判斷是否為乘數環 (倒數第二) 或誤差環 (倒數第一)
+#         is_last_band = (band_index == total_bands - 1)
+#         is_multiplier_band = (band_index == total_bands - 2)
+#         can_be_metal = is_last_band or is_multiplier_band
+
+#         min_distance = float('inf')
+#         best_match = "unknown"
+        
+#         # 遍歷標準色，尋找最短距離 (最相似的顏色)
+#         for color_name, ref_lab in self.lab_references.items():
+            
+#             # 【核心過濾機制】：如果不是末端色環，直接剝奪金、銀的參賽資格！
+#             # 這樣系統就絕對不會把第一環的黃色誤判為金色。
+#             if not can_be_metal and color_name in ["gold", "silver"]:
+#                 continue
+                
+#             # 計算歐幾里得距離 (Delta E)
+#             distance = np.linalg.norm(target_lab - ref_lab)
+            
+#             if distance < min_distance:
+#                 min_distance = distance
+#                 best_match = color_name
+                
+#         return best_match
+
+# classifier = ResistorColorClassifier()
