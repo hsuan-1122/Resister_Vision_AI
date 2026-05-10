@@ -12,7 +12,7 @@ import joblib  # 🌟 新增：用來讀取訓練好的 .pkl 模型
 # ==========================================
 # 設為 True：每次辨識都會把 RGBHSV 記錄到 CSV 中 (適合蒐集資料階段)
 # 設為 False：純粹進行辨識，不寫入任何檔案 (適合正式上線階段)
-ENABLE_DATA_COLLECTION = False
+ENABLE_DATA_COLLECTION = True
 
 # ==========================================
 # 🌟 載入訓練好的 SVM 模型 (放在全域避免重複載入)
@@ -96,29 +96,6 @@ def detect_resistor_bands_centroid(image_path, num_bands=4):
     return package_band_data(robust_hsv, band_positions)
 
 
-# def get_resistor_color(image_path, num_bands=4):
-#     band_data = detect_resistor_bands_centroid(image_path, num_bands=4)
-#     color_array = []
-    
-#     # 🌟 防呆：如果完全沒偵測到任何色環，直接回傳 None 讓 app.py 報錯
-#     if not band_data or len(band_data) == 0:
-#         print("⚠️ 警告：完全沒有偵測到色環特徵！")
-#         return None
-
-#     # 🌟 修改：安全地迴圈抓取資料
-#     for i in range(num_bands):
-#         # 檢查目前的 index 是否還在偵測到的陣列長度內
-#         if i < len(band_data):
-#             color = classifier.classify_band_color(band_data[i], i, num_bands)
-#             color_array.append(color)
-#             print(color)
-#         else:
-#             # 如果偵測到的環不夠（例如預期4環只找到3環），剩下的直接補 "unknown"
-#             print(f"⚠️ 警告：第 {i+1} 環特徵遺失，補上 unknown。")
-#             color_array.append("unknown")
-            
-#     return color_array
-
 def get_resistor_color(image_path, num_bands=4):
     band_data = detect_resistor_bands_centroid(image_path, num_bands=num_bands) 
     color_array = []
@@ -129,11 +106,31 @@ def get_resistor_color(image_path, num_bands=4):
         print("⚠️ 警告：完全沒有偵測到色環特徵！")
         return None
 
+    # ==========================================
+    # 🌟 新增：利用間距判斷電阻方向並自動排序
+    # ==========================================
+    # 至少要有 3 個環才能比較「頭尾間距」
+    if len(band_data) >= 3:
+        # 計算最左邊的間距 (第1環與第2環的距離)
+        first_gap = band_data[1]["absolute_x"] - band_data[0]["absolute_x"]
+        # 計算最右邊的間距 (倒數第2環與最後1環的距離)
+        last_gap = band_data[-1]["absolute_x"] - band_data[-2]["absolute_x"]
+
+        # 如果左邊間距明顯大於右邊間距，代表電阻被反放了 (誤差環在最左邊)
+        # 我們將陣列反轉，確保後續讀取永遠是從「數值環」讀到「誤差環」
+        if first_gap > last_gap:
+            print("🔄 偵測到電阻反向 (最大間距在左側)，自動反轉讀取順序...")
+            band_data.reverse()
+        else:
+            print("➡️ 電阻方向正確 (最大間距在右側)。")
+    else:
+        print("⚠️ 警告：偵測到的色環少於 3 個，無法透過間距判斷方向。")
+
     # 安全地迴圈抓取資料
     for i in range(num_bands):
         # 檢查目前的 index 是否還在偵測到的陣列長度內
         if i < len(band_data):
-            # 1. 提取 6 個特徵數值
+            # 1. 提取特徵數值 (保留 RGB 供模型預測，但之後不存入 CSV)
             r = band_data[i]["rgb"]["r"]
             g = band_data[i]["rgb"]["g"]
             b = band_data[i]["rgb"]["b"]
@@ -142,114 +139,42 @@ def get_resistor_color(image_path, num_bands=4):
             v = band_data[i]["hsv"]["v"]
 
             # ==========================================
-            # 🌟 使用新模型取代舊的距離計算
+            # 🌟 使用新模型預測
             # ==========================================
-            # 把特徵打包成 2D 陣列餵給模型預測
             features = [[r, g, b, h, s, v]]
             predicted_color = svm_model.predict(features)[0]
 
-            # 💡 商業邏輯防呆：金銀不該出現在前段環數
+            # 💡 商業邏輯防呆
             is_metal_pos = (i >= num_bands - 2)
             if not is_metal_pos and predicted_color in ["gold", "silver"]:
                 predicted_color = "yellow" if predicted_color == "gold" else "gray"
 
             color_array.append(predicted_color)
-            print(f"🎯 第 {i+1} 環預測結果: {predicted_color}")
+            print(f"🎯 第 {i+1} 環預測結果: {predicted_color} (X座標: {band_data[i]['absolute_x']})")
 
-            # 2. 如果開關打開，將這組數據暫存起來
+            # 2. 如果開關打開，只將 HSV 數據暫存起來
             if ENABLE_DATA_COLLECTION:
-                data_to_save.append([r, g, b, h, s, v])
+                # 若發生反轉，存入 CSV 的數據也會是校正後的正確順序 (數值 -> 誤差)
+                data_to_save.append([h, s]) 
                 
         else:
-            # 如果偵測到的環不夠，剩下的直接補 "unknown"
             print(f"⚠️ 警告：第 {i+1} 環特徵遺失，補上 unknown。")
             color_array.append("unknown")
             
     # ==========================================
-    # 🌟 批次寫入 CSV 功能 (受全域開關控制)
+    # 🌟 批次寫入 CSV 功能
     # ==========================================
     if ENABLE_DATA_COLLECTION and len(data_to_save) > 0:
-        csv_filename = "color_data_log.csv"
+        csv_filename = "color_data_log2.csv"
         file_exists = os.path.exists(csv_filename)
 
-        # 使用 'a' (append) 模式開啟檔案
         with open(csv_filename, mode='a', newline='', encoding='utf-8') as csvfile:
             writer = csv.writer(csvfile)
             
-            # 如果是新建立的檔案，先寫入第一行的欄位名稱
             if not file_exists:
-                writer.writerow(['R', 'G', 'B', 'H', 'S', 'V'])
+                writer.writerow(['H', 'S'])
                 
-            # 一次把剛才暫存的所有顏色數據寫入，效能更好
             writer.writerows(data_to_save)
         
     return color_array
 
-
-# class ResistorColorClassifier:
-#     def __init__(self):
-#         # 1. 建立「標準色環字典」(RGB)
-#         # 這些是完美白光下的基準點，你可以根據實際環境微調
-#         self.standard_colors = {
-#             "black":  (0,  0,  0), #
-#             "brown":  (25, 0,  0), #
-#             "red":    (73, 0,  18), #
-#             "orange": (90, 30, 0), #
-#             "yellow": (100, 110, 20),
-#             "green":  (0,  40, 0), #
-#             "blue":   (35,  65,  100),
-#             "purple": (120, 60,  140),
-#             "gray":   (115, 115, 115),
-#             "white":  (200, 200, 200),
-#             "gold":   (90, 75, 40),
-#             "silver": (160, 160, 170)
-#         }
-        
-#         # 預先將所有標準色轉換為 LAB 空間，節省未來運算時間
-#         self.lab_references = {}
-#         for name, rgb in self.standard_colors.items():
-#             self.lab_references[name] = self._rgb_to_lab(rgb)
-#     def _rgb_to_lab(self, rgb_tuple):
-#         """將單一 RGB tuple 轉換為 LAB 空間"""
-#         pixel_img = np.uint8([[rgb_tuple]])
-#         lab_pixel = cv2.cvtColor(pixel_img, cv2.COLOR_RGB2LAB)
-#         return lab_pixel[0][0].astype(np.float32)
-
-#     def classify_band_color(self, band_info, band_index, total_bands):
-#         """
-#         根據 CIELAB 色彩距離與位置權重，分類電阻顏色。
-#         """
-#         # 直接拿你上一步打包好的 RGB 數值
-#         r = band_info["rgb"]["r"]
-#         g = band_info["rgb"]["g"]
-#         b = band_info["rgb"]["b"]
-        
-#         # 將目標顏色轉為 LAB
-#         target_lab = self._rgb_to_lab((r, g, b))
-        
-#         # 位置邏輯：判斷是否為乘數環 (倒數第二) 或誤差環 (倒數第一)
-#         is_last_band = (band_index == total_bands - 1)
-#         is_multiplier_band = (band_index == total_bands - 2)
-#         can_be_metal = is_last_band or is_multiplier_band
-
-#         min_distance = float('inf')
-#         best_match = "unknown"
-        
-#         # 遍歷標準色，尋找最短距離 (最相似的顏色)
-#         for color_name, ref_lab in self.lab_references.items():
-            
-#             # 【核心過濾機制】：如果不是末端色環，直接剝奪金、銀的參賽資格！
-#             # 這樣系統就絕對不會把第一環的黃色誤判為金色。
-#             if not can_be_metal and color_name in ["gold", "silver"]:
-#                 continue
-                
-#             # 計算歐幾里得距離 (Delta E)
-#             distance = np.linalg.norm(target_lab - ref_lab)
-            
-#             if distance < min_distance:
-#                 min_distance = distance
-#                 best_match = color_name
-                
-#         return best_match
-
-# classifier = ResistorColorClassifier()

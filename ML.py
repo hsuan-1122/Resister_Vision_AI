@@ -10,7 +10,7 @@ df = pd.read_csv('ML_data2.csv')
 df = df.dropna()  # 確保沒有空值干擾模型訓練
 
 # 2. 切分特徵 (X) 與標籤 (y)
-X = df[['R', 'G', 'B', 'H', 'S', 'V']]
+X = df[['H', 'S']]
 y = df['label']
 
 # 3. 切分訓練集與測試集 (80% 給模型學習，20% 當作模擬考來驗證)
@@ -29,5 +29,5 @@ print("各顏色分類報告:")
 print(classification_report(y_test, predictions))
 
 # 6. 將訓練好的大腦「存檔」 (極度重要！)
-joblib.dump(model, 'resistor_color_svm.pkl')
-print("模型已儲存為 resistor_color_svm.pkl")
+joblib.dump(model, 'resistor_color_svm_V2.pkl')
+print("模型已儲存為 resistor_color_svm_V2.pkl")
