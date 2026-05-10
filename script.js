@@ -131,7 +131,6 @@ function calculateResistance(colorArray) {
 
     } catch (e) {
         console.error("查表計算發生錯誤:", e);
-        print("查表計算發生錯誤:", e)
         return { displayValue: "顏色辨識錯誤", uiColors: [] };
     }
 }

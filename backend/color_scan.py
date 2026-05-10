@@ -12,14 +12,14 @@ import joblib  # 🌟 新增：用來讀取訓練好的 .pkl 模型
 # ==========================================
 # 設為 True：每次辨識都會把 RGBHSV 記錄到 CSV 中 (適合蒐集資料階段)
 # 設為 False：純粹進行辨識，不寫入任何檔案 (適合正式上線階段)
-ENABLE_DATA_COLLECTION = True
+ENABLE_DATA_COLLECTION = False
 
 # ==========================================
 # 🌟 載入訓練好的 SVM 模型 (放在全域避免重複載入)
 # ==========================================
 print("🚀 正在載入 SVM 顏色分類模型...")
 # 確保檔名與路徑和你儲存的 pkl 檔一致
-svm_model = joblib.load('resistor_color_svm.pkl') 
+svm_model = joblib.load('resistor_color_svm_v5.pkl') 
 print("✅ SVM 模型載入完成！")
 
 def package_band_data(robust_hsv, band_positions):
@@ -141,7 +141,7 @@ def get_resistor_color(image_path, num_bands=4):
             # ==========================================
             # 🌟 使用新模型預測
             # ==========================================
-            features = [[r, g, b, h, s, v]]
+            features = [[h, s]]
             predicted_color = svm_model.predict(features)[0]
 
             # 💡 商業邏輯防呆
