@@ -90,7 +90,7 @@ function calculateResistance(colorArray) {
     let resistance = 0;
     let tolerance = "";
 
-    // try {
+    try {
         if (colorArray.length === 4) {
             // 四環：(環1*10 + 環2) * 倍率
             const val1 = resistorColorDict[colorArray[0]].value;
@@ -129,10 +129,11 @@ function calculateResistance(colorArray) {
             uiColors: uiColors
         };
 
-    // } catch (e) {
-    //     console.error("查表計算發生錯誤:", e);
-    //     return { displayValue: "顏色辨識錯誤", uiColors: [] };
-    // }
+    } catch (e) {
+        console.error("查表計算發生錯誤:", e);
+        print("查表計算發生錯誤:", e)
+        return { displayValue: "顏色辨識錯誤", uiColors: [] };
+    }
 }
 
 // 3. 呼叫真實 API
